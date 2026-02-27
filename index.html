@@ -62,12 +62,12 @@ function Seat({seat,occ,onPress}){
       gap:1,transition:"transform .15s,box-shadow .15s",
       boxShadow:filled?"0 2px 8px rgba(26,115,232,.18)":"0 1px 3px rgba(0,0,0,.05)",
     }}>
-      <span style={{fontSize:13,fontWeight:800,color:filled?"#1a73e8":"#a0aec0",letterSpacing:.5}}>{seat.id}번</span>
+      <span style={{fontSize:16,fontWeight:800,color:filled?"#1a73e8":"#a0aec0",letterSpacing:.5}}>{seat.id}번</span>
       {filled?(<>
-        <span style={{fontSize:18,fontWeight:800,color:"#1a365d",lineHeight:1.2}}>{occ.studentName}</span>
-        <span style={{fontSize:11,color:"#7c9ab8",marginTop:1}}>{elapsed}</span>
+        <span style={{fontSize:22,fontWeight:800,color:"#1a365d",lineHeight:1.2}}>{occ.studentName}</span>
+        <span style={{fontSize:13,color:"#7c9ab8",marginTop:1}}>{elapsed}</span>
       </>):(
-        <span style={{fontSize:14,color:"#b0bec5",fontWeight:600}}>빈 자리</span>
+        <span style={{fontSize:17,color:"#b0bec5",fontWeight:600}}>빈 자리</span>
       )}
     </button>
   );
@@ -142,6 +142,11 @@ function App(){
   const[changePinConfirm,setChangePinConfirm]=useState("");
   const[changePinErr,setChangePinErr]=useState("");
   const[changePinOk,setChangePinOk]=useState("");
+  const[stuPinOld,setStuPinOld]=useState("");
+  const[stuPinNew,setStuPinNew]=useState("");
+  const[stuPinConfirm,setStuPinConfirm]=useState("");
+  const[stuPinErr,setStuPinErr]=useState("");
+  const[stuPinOk,setStuPinOk]=useState("");
 
   useEffect(()=>{const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t)},[]);
 
@@ -149,7 +154,7 @@ function App(){
   const saveSm=(m)=>{setSm(m);LS_set("sm",m)};
   const saveLog=(l)=>{setLog(l);LS_set("log",l)};
 
-  const close=()=>{setModal(null);setSelSeat(null);setSelStu(null);setPin("");setPinErr("");setAPin("");setMoveSeat(null);setNName("");setNPin("");setEditStu(null);setDelConfirm(null);setBulkConfirm(false);setLoginName("");setChangePinOld("");setChangePinNew("");setChangePinConfirm("");setChangePinErr("");setChangePinOk("")};
+  const close=()=>{setModal(null);setSelSeat(null);setSelStu(null);setPin("");setPinErr("");setAPin("");setMoveSeat(null);setNName("");setNPin("");setEditStu(null);setDelConfirm(null);setBulkConfirm(false);setLoginName("");setChangePinOld("");setChangePinNew("");setChangePinConfirm("");setChangePinErr("");setChangePinOk("");setStuPinOld("");setStuPinNew("");setStuPinConfirm("");setStuPinErr("");setStuPinOk("")};
 
   const checkout=(sid)=>{
     const o=sm[sid];if(!o)return;
@@ -241,9 +246,9 @@ function App(){
       <div style={{flex:1,display:"flex",overflow:"hidden"}}>
         {/* LEFT: Seat Map */}
         <div style={{flex:1,padding:"12px 20px 12px 24px",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <div style={{width:"100%",maxWidth:820,height:"94%",display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{width:"100%",maxWidth:960,height:"96%",display:"flex",flexDirection:"column",gap:12}}>
             <div style={{flex:1,display:"flex",flexDirection:"column"}}>
-              <div style={{fontSize:13,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>A 구 역</div>
+              <div style={{fontSize:16,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>A 구 역</div>
               <div style={{flex:1,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gridTemplateRows:"repeat(2,1fr)",gap:8}}>
                 {SEATS.filter(s=>s.zone==="A").map(s=>(
                   <div key={s.id}><Seat seat={s} occ={sm[s.id]} onPress={seatPress}/></div>
@@ -252,7 +257,7 @@ function App(){
             </div>
             <div style={{flex:1,display:"flex",gap:20}}>
               <div style={{flex:1,display:"flex",flexDirection:"column"}}>
-                <div style={{fontSize:13,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>B 구 역</div>
+                <div style={{fontSize:16,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>B 구 역</div>
                 <div style={{flex:1,display:"grid",gridTemplateColumns:"repeat(2,1fr)",gridTemplateRows:"repeat(2,1fr)",gap:8}}>
                   {SEATS.filter(s=>s.zone==="B").map(s=>(
                     <div key={s.id}><Seat seat={s} occ={sm[s.id]} onPress={seatPress}/></div>
@@ -260,17 +265,17 @@ function App(){
                 </div>
               </div>
               <div style={{flex:1,display:"flex",flexDirection:"column"}}>
-                <div style={{fontSize:13,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>C 구 역</div>
+                <div style={{fontSize:16,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>C 구 역</div>
                 <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr",gridTemplateRows:"repeat(2,1fr)",gap:8}}>
                   <div><Seat seat={SEATS.find(s=>s.id===11)} occ={sm[11]} onPress={seatPress}/></div>
                   <div style={{borderRadius:10,border:"2px solid #e2d4c0",background:"linear-gradient(145deg,#fdf6ee,#f5ead8)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
-                    <span style={{fontSize:13,fontWeight:800,color:"#b8956a",letterSpacing:.5}}>스탠딩</span>
-                    <span style={{fontSize:22,fontWeight:900,color:"#8b6914"}}>1</span>
+                    <span style={{fontSize:16,fontWeight:800,color:"#b8956a",letterSpacing:.5}}>스탠딩</span>
+                    <span style={{fontSize:26,fontWeight:900,color:"#8b6914"}}>1</span>
                   </div>
                   <div><Seat seat={SEATS.find(s=>s.id===14)} occ={sm[14]} onPress={seatPress}/></div>
                   <div style={{borderRadius:10,border:"2px solid #e2d4c0",background:"linear-gradient(145deg,#fdf6ee,#f5ead8)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
-                    <span style={{fontSize:13,fontWeight:800,color:"#b8956a",letterSpacing:.5}}>스탠딩</span>
-                    <span style={{fontSize:22,fontWeight:900,color:"#8b6914"}}>2</span>
+                    <span style={{fontSize:16,fontWeight:800,color:"#b8956a",letterSpacing:.5}}>스탠딩</span>
+                    <span style={{fontSize:26,fontWeight:900,color:"#8b6914"}}>2</span>
                   </div>
                 </div>
               </div>
@@ -397,7 +402,51 @@ function App(){
           </div>
           <div style={{marginTop:16,display:"flex",justifyContent:"center",gap:8}}>
             <Btn onClick={close} outline c="#94a3b8">취소</Btn>
+            <Btn onClick={()=>{setStuPinOld("");setStuPinNew("");setStuPinConfirm("");setStuPinErr("");setStuPinOk("");setModal("stu-pin")}} outline c="#f59e0b">🔑 비밀번호</Btn>
             <Btn onClick={()=>checkout(selSeat.id)} c="#dc2626">퇴실</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Student PIN Change */}
+      {modal==="stu-pin"&&(
+        <Modal onClose={close} w={380}>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:28}}>🔑</div>
+            <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>{sm[selSeat?.id]?.studentName} 비밀번호 변경</div>
+          </div>
+          {stuPinErr&&<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"6px 10px",marginBottom:10,fontSize:12,color:"#dc2626",fontWeight:600,textAlign:"center"}}>{stuPinErr}</div>}
+          {stuPinOk&&<div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"6px 10px",marginBottom:10,fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center"}}>{stuPinOk}</div>}
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>현재 비밀번호</div>
+              <input type="password" value={stuPinOld} onChange={e=>{setStuPinOld(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("")}} placeholder="현재 PIN 4자리" maxLength={4}
+                style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>새 비밀번호</div>
+              <input type="password" value={stuPinNew} onChange={e=>{setStuPinNew(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("")}} placeholder="새 PIN 4자리" maxLength={4}
+                style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>새 비밀번호 확인</div>
+              <input type="password" value={stuPinConfirm} onChange={e=>{setStuPinConfirm(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("")}} placeholder="새 PIN 다시 입력" maxLength={4}
+                style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
+            </div>
+          </div>
+          <div style={{marginTop:16,display:"flex",justifyContent:"center",gap:8}}>
+            <Btn onClick={()=>setModal("co")} outline c="#94a3b8">돌아가기</Btn>
+            <Btn onClick={()=>{
+              const occ=sm[selSeat?.id];if(!occ)return;
+              const stu=students.find(s=>s.id===occ.studentId);if(!stu)return;
+              if(String(stuPinOld)!==String(stu.pin)){setStuPinErr("현재 비밀번호가 일치하지 않습니다.");return}
+              if(stuPinNew.length<4){setStuPinErr("새 비밀번호 4자리를 입력하세요.");return}
+              if(stuPinNew!==stuPinConfirm){setStuPinErr("새 비밀번호가 일치하지 않습니다.");return}
+              if(stuPinNew===stuPinOld){setStuPinErr("현재와 다른 비밀번호를 입력하세요.");return}
+              saveStu(students.map(s=>s.id===stu.id?{...s,pin:String(stuPinNew)}:s));
+              setStuPinOld("");setStuPinNew("");setStuPinConfirm("");
+              setStuPinOk("비밀번호가 변경되었습니다!");
+            }}>변경</Btn>
           </div>
         </Modal>
       )}
