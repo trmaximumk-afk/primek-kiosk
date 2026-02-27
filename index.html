@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>프라임K수학 STUDY ROOM</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a73e8'/><text x='50' y='65' font-size='40' font-weight='900' fill='white' text-anchor='middle' font-family='sans-serif'>PK</text></svg>">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body,#root{height:100%;overflow:hidden;touch-action:manipulation}
+body{font-family:'Pretendard Variable','Apple SD Gothic Neo','Malgun Gothic',sans-serif}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+@keyframes mIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+button,input,select{font-family:inherit}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useEffect,useCallback} = React;
+
+const SEATS=[
+  {id:1,zone:"A"},{id:2,zone:"A"},{id:3,zone:"A"},{id:4,zone:"A"},
+  {id:5,zone:"A"},{id:6,zone:"A"},{id:7,zone:"A"},{id:8,zone:"A"},
+  {id:9,zone:"B"},{id:10,zone:"B"},{id:12,zone:"B"},{id:13,zone:"B"},
+  {id:11,zone:"C"},{id:14,zone:"C"},
+];
+const DEFAULT_ADMIN_PIN="0000";
+const DEFAULT_STUDENTS=[
+  {id:1,name:"김효민",pin:"1111"},
+  {id:2,name:"학생2",pin:"2222"},
+  {id:3,name:"학생3",pin:"3333"},
+];
+
+function LS_get(k,fb){try{const v=localStorage.getItem("pk-"+k);return v?JSON.parse(v):fb}catch{return fb}}
+function LS_set(k,d){try{localStorage.setItem("pk-"+k,JSON.stringify(d))}catch(e){console.error(e)}}
+
+const fmt=(ms)=>{if(!ms||ms<=0)return"0분";const m=Math.floor(ms/60000),h=Math.floor(m/60);return h>0?h+"시간 "+(m%60)+"분":(m%60)+"분"};
+const clock=(d)=>d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
+const dateStr=(d)=>d.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"short"});
+const mKey=(d)=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const mLabel=(k)=>{const[y,m]=k.split("-");return y+"년 "+parseInt(m)+"월"};
+
+function Seat({seat,occ,onPress}){
+  const filled=!!occ;
+  const elapsed=filled?fmt(Date.now()-occ.checkinTs):"";
+  return(
+    <button onClick={()=>onPress(seat)} style={{
+      width:"100%",height:"100%",borderRadius:10,padding:6,
+      border:filled?"2px solid #1a73e8":"2px dashed #c5cdd8",
+      background:filled?"linear-gradient(145deg,#e3edfc,#cddcf8)":"linear-gradient(145deg,#f7f8fa,#eef0f4)",
+      cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      gap:1,transition:"transform .15s,box-shadow .15s",
+      boxShadow:filled?"0 2px 8px rgba(26,115,232,.18)":"0 1px 3px rgba(0,0,0,.05)",
+    }}>
+      <span style={{fontSize:13,fontWeight:800,color:filled?"#1a73e8":"#a0aec0",letterSpacing:.5}}>{seat.id}번</span>
+      {filled?(<>
+        <span style={{fontSize:18,fontWeight:800,color:"#1a365d",lineHeight:1.2}}>{occ.studentName}</span>
+        <span style={{fontSize:11,color:"#7c9ab8",marginTop:1}}>{elapsed}</span>
+      </>):(
+        <span style={{fontSize:14,color:"#b0bec5",fontWeight:600}}>빈 자리</span>
+      )}
+    </button>
+  );
+}
+
+function Modal({children,onClose,w=400}){
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(10,20,40,.45)",backdropFilter:"blur(5px)"}} onClick={onClose}>
+      <div style={{background:"#fff",borderRadius:18,padding:"24px 28px",width:w,maxWidth:"94vw",maxHeight:"88vh",overflowY:"auto",boxShadow:"0 16px 48px rgba(0,0,0,.22)",animation:"mIn .2s ease"}} onClick={e=>e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PinPad({value,onChange,len=4}){
+  const press=(n)=>{if(value.length<len)onChange(value+String(n))};
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+      <div style={{display:"flex",gap:8}}>
+        {Array.from({length:len}).map((_,i)=>(
+          <div key={i} style={{width:44,height:50,borderRadius:10,border:"2px solid "+(i<value.length?"#1a73e8":"#dde2e8"),background:i<value.length?"#e8f0fe":"#f8f9fb",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:800,color:"#1a365d",transition:"all .12s"}}>
+            {value[i]?"●":""}
+          </div>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,width:200}}>
+        {[1,2,3,4,5,6,7,8,9].map(n=>(
+          <button key={n} onClick={()=>press(n)} style={{height:44,borderRadius:8,border:"1.5px solid #e0e4ea",background:"#fafbfc",fontSize:18,fontWeight:700,color:"#1a365d",cursor:"pointer"}}>{n}</button>
+        ))}
+        <button onClick={()=>onChange("")} style={{height:44,borderRadius:8,border:"1.5px solid #fcc",background:"#fff5f5",fontSize:11,fontWeight:700,color:"#e53e3e",cursor:"pointer"}}>초기화</button>
+        <button onClick={()=>press("0")} style={{height:44,borderRadius:8,border:"1.5px solid #e0e4ea",background:"#fafbfc",fontSize:18,fontWeight:700,color:"#1a365d",cursor:"pointer"}}>0</button>
+        <button onClick={()=>onChange(value.slice(0,-1))} style={{height:44,borderRadius:8,border:"1.5px solid #e0e4ea",background:"#fafbfc",fontSize:15,fontWeight:700,color:"#546e7a",cursor:"pointer"}}>←</button>
+      </div>
+    </div>
+  );
+}
+
+function Btn({children,onClick,c="#1a73e8",outline,s={},disabled}){
+  return(
+    <button disabled={disabled} onClick={onClick} style={{
+      padding:"9px 18px",borderRadius:9,fontWeight:700,fontSize:13,
+      border:outline?"2px solid "+c:"none",background:outline?"transparent":c,
+      color:outline?c:"#fff",cursor:disabled?"not-allowed":"pointer",opacity:disabled?.45:1,transition:"opacity .12s",...s
+    }}>{children}</button>
+  );
+}
+
+function App(){
+  const[now,setNow]=useState(new Date());
+  const[students,setStudents]=useState(()=>LS_get("stu",DEFAULT_STUDENTS));
+  const[sm,setSm]=useState(()=>LS_get("sm",{}));
+  const[log,setLog]=useState(()=>LS_get("log",{}));
+  const[adminPinStored,setAdminPinStored]=useState(()=>LS_get("apin",DEFAULT_ADMIN_PIN));
+
+  const[modal,setModal]=useState(null);
+  const[selSeat,setSelSeat]=useState(null);
+  const[selStu,setSelStu]=useState(null);
+  const[pin,setPin]=useState("");
+  const[pinErr,setPinErr]=useState("");
+  const[admin,setAdmin]=useState(false);
+  const[aPin,setAPin]=useState("");
+  const[moveSeat,setMoveSeat]=useState(null);
+  const[rMonth,setRMonth]=useState(mKey(new Date()));
+  const[nName,setNName]=useState("");const[nPin,setNPin]=useState("");
+  const[editStu,setEditStu]=useState(null);
+  const[bulkConfirm,setBulkConfirm]=useState(false);
+  const[delConfirm,setDelConfirm]=useState(null);
+  const[loginName,setLoginName]=useState("");
+  const[changePinOld,setChangePinOld]=useState("");
+  const[changePinNew,setChangePinNew]=useState("");
+  const[changePinConfirm,setChangePinConfirm]=useState("");
+  const[changePinErr,setChangePinErr]=useState("");
+  const[changePinOk,setChangePinOk]=useState("");
+
+  useEffect(()=>{const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t)},[]);
+
+  const saveStu=(s)=>{setStudents(s);LS_set("stu",s)};
+  const saveSm=(m)=>{setSm(m);LS_set("sm",m)};
+  const saveLog=(l)=>{setLog(l);LS_set("log",l)};
+
+  const close=()=>{setModal(null);setSelSeat(null);setSelStu(null);setPin("");setPinErr("");setAPin("");setMoveSeat(null);setNName("");setNPin("");setEditStu(null);setDelConfirm(null);setBulkConfirm(false);setLoginName("");setChangePinOld("");setChangePinNew("");setChangePinConfirm("");setChangePinErr("");setChangePinOk("")};
+
+  const checkout=(sid)=>{
+    const o=sm[sid];if(!o)return;
+    const dur=Date.now()-o.checkinTs,mk=mKey(new Date());
+    const nl={...log};if(!nl[mk])nl[mk]={};nl[mk][o.studentId]=(nl[mk][o.studentId]||0)+dur;
+    saveLog(nl);
+    const ns={...sm};delete ns[sid];saveSm(ns);close();
+  };
+
+  const seatPress=(seat)=>{
+    const o=sm[seat.id];
+    if(o&&!admin){setSelSeat(seat);setModal("co")}
+    else if(o&&admin){setSelSeat(seat);setModal("adm-seat")}
+    else if(!o&&admin){setSelSeat(seat);setModal("adm-assign")}
+    else{setSelSeat(seat);setModal("stu")}
+  };
+
+  const moveTo=(from,to)=>{const ns={...sm};ns[to]=ns[from];delete ns[from];saveSm(ns);close()};
+
+  const addStu=()=>{
+    if(!nName.trim()||nPin.length<4)return;
+    const dup=students.find(s=>s.name===nName.trim()&&String(s.pin)===String(nPin));
+    if(dup){setPinErr("같은 이름+PIN 조합이 이미 존재합니다.");return}
+    const mx=students.reduce((a,s)=>Math.max(a,s.id),0);
+    saveStu([...students,{id:mx+1,name:nName.trim(),pin:String(nPin)}]);
+    setNName("");setNPin("");setPinErr("");
+  };
+
+  const delStu=(sid)=>{
+    saveStu(students.filter(s=>s.id!==sid));
+    const ns={...sm};Object.entries(ns).forEach(([k,v])=>{if(v?.studentId===sid)delete ns[k]});saveSm(ns);
+  };
+
+  const updateStu=()=>{
+    if(!editStu)return;
+    saveStu(students.map(s=>s.id===editStu.id?{...s,name:editStu.name,pin:String(editStu.pin)}:s));
+    const ns={...sm};
+    Object.entries(ns).forEach(([k,v])=>{if(v?.studentId===editStu.id)ns[k]={...v,studentName:editStu.name}});
+    saveSm(ns);setEditStu(null);
+  };
+
+  const ranking=(mk)=>{
+    const tot={...(log[mk]||{})};
+    if(mk===mKey(new Date()))Object.values(sm).forEach(o=>{if(o)tot[o.studentId]=(tot[o.studentId]||0)+(Date.now()-o.checkinTs)});
+    return Object.entries(tot).map(([sid,ms])=>{const s=students.find(x=>x.id===+sid);return{sid:+sid,name:s?.name||"?",ms}}).sort((a,b)=>b.ms-a.ms);
+  };
+
+  const occ=Object.keys(sm).filter(k=>sm[k]).length;
+
+  return(
+    <div style={{height:"100vh",width:"100vw",overflow:"hidden",background:"linear-gradient(135deg,#eef1f5 0%,#e4e8ee 50%,#eef1f5 100%)",fontFamily:"'Pretendard Variable','Apple SD Gothic Neo','Malgun Gothic',sans-serif",display:"flex",flexDirection:"column"}}>
+
+      {/* TOP BAR */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 24px",background:"rgba(255,255,255,.88)",backdropFilter:"blur(10px)",borderBottom:"1px solid #dde2e8",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#1a73e8,#0d47a1)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:13}}>PK</div>
+          <div>
+            <div style={{fontSize:15,fontWeight:800,color:"#0f172a",lineHeight:1.2}}>프라임K수학 STUDY ROOM</div>
+            <div style={{fontSize:10,color:"#94a3b8",fontWeight:500}}>태도가 공부를 완성한다!</div>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          {admin&&(
+            <div style={{display:"flex",gap:0,background:"#fef2f2",borderRadius:8,overflow:"hidden",border:"1.5px solid #fecaca"}}>
+              <button onClick={()=>setModal("admin-stu")} style={{padding:"7px 14px",border:"none",background:"transparent",fontSize:12,fontWeight:700,color:"#991b1b",cursor:"pointer"}}>👩‍🎓 학생관리</button>
+              <button onClick={()=>setModal("change-pin")} style={{padding:"7px 14px",border:"none",background:"transparent",fontSize:12,fontWeight:700,color:"#991b1b",cursor:"pointer",borderLeft:"1px solid #fecaca"}}>🔑 비밀번호</button>
+              {bulkConfirm?(
+                <>
+                  <button onClick={()=>{Object.keys(sm).forEach(k=>{const o=sm[k];if(o){const dur=Date.now()-o.checkinTs;const mk2=mKey(new Date());const nl={...log};if(!nl[mk2])nl[mk2]={};nl[mk2][o.studentId]=(nl[mk2][o.studentId]||0)+dur;saveLog(nl)}});saveSm({});setBulkConfirm(false)}} style={{padding:"7px 14px",border:"none",background:"#dc2626",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",borderLeft:"1px solid #fecaca",borderRadius:4}}>✅ 확인</button>
+                  <button onClick={()=>setBulkConfirm(false)} style={{padding:"7px 14px",border:"none",background:"transparent",fontSize:12,fontWeight:700,color:"#991b1b",cursor:"pointer",borderLeft:"1px solid #fecaca"}}>취소</button>
+                </>
+              ):(
+                <button onClick={()=>setBulkConfirm(true)} style={{padding:"7px 14px",border:"none",background:"transparent",fontSize:12,fontWeight:700,color:"#991b1b",cursor:"pointer",borderLeft:"1px solid #fecaca"}}>🚪 전체퇴실</button>
+              )}
+            </div>
+          )}
+          <button onClick={()=>setModal("rank")} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #f59e0b",background:"linear-gradient(135deg,#fffbeb,#fef3c7)",cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+            <span style={{fontSize:15}}>🏆</span><span style={{fontSize:12,fontWeight:700,color:"#92400e"}}>공부왕</span>
+          </button>
+          <button onClick={()=>{if(admin)setAdmin(false);else setModal("adm-login")}}
+            style={{padding:"7px 14px",borderRadius:8,cursor:"pointer",border:admin?"1.5px solid #dc2626":"1.5px solid #b0b8c4",background:admin?"#fee2e2":"#fff",display:"flex",alignItems:"center",gap:4}}>
+            <span style={{fontSize:13}}>{admin?"🔓":"🔒"}</span>
+            <span style={{fontSize:12,fontWeight:700,color:admin?"#dc2626":"#64748b"}}>{admin?"관리자 ON":"관리자"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN BODY */}
+      <div style={{flex:1,display:"flex",overflow:"hidden"}}>
+        {/* LEFT: Seat Map */}
+        <div style={{flex:1,padding:"12px 20px 12px 24px",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{width:"100%",maxWidth:680,height:"88%",display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{flex:1,display:"flex",flexDirection:"column"}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>A 구 역</div>
+              <div style={{flex:1,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gridTemplateRows:"repeat(2,1fr)",gap:8}}>
+                {SEATS.filter(s=>s.zone==="A").map(s=>(
+                  <div key={s.id}><Seat seat={s} occ={sm[s.id]} onPress={seatPress}/></div>
+                ))}
+              </div>
+            </div>
+            <div style={{flex:1,display:"flex",gap:20}}>
+              <div style={{flex:1,display:"flex",flexDirection:"column"}}>
+                <div style={{fontSize:13,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>B 구 역</div>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"repeat(2,1fr)",gridTemplateRows:"repeat(2,1fr)",gap:8}}>
+                  {SEATS.filter(s=>s.zone==="B").map(s=>(
+                    <div key={s.id}><Seat seat={s} occ={sm[s.id]} onPress={seatPress}/></div>
+                  ))}
+                </div>
+              </div>
+              <div style={{flex:1,display:"flex",flexDirection:"column"}}>
+                <div style={{fontSize:13,fontWeight:800,color:"#94a3b8",letterSpacing:2,marginBottom:4}}>C 구 역</div>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr",gridTemplateRows:"repeat(2,1fr)",gap:8}}>
+                  <div><Seat seat={SEATS.find(s=>s.id===11)} occ={sm[11]} onPress={seatPress}/></div>
+                  <div style={{borderRadius:10,border:"2px solid #e2d4c0",background:"linear-gradient(145deg,#fdf6ee,#f5ead8)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
+                    <span style={{fontSize:13,fontWeight:800,color:"#b8956a",letterSpacing:.5}}>스탠딩</span>
+                    <span style={{fontSize:22,fontWeight:900,color:"#8b6914"}}>1</span>
+                  </div>
+                  <div><Seat seat={SEATS.find(s=>s.id===14)} occ={sm[14]} onPress={seatPress}/></div>
+                  <div style={{borderRadius:10,border:"2px solid #e2d4c0",background:"linear-gradient(145deg,#fdf6ee,#f5ead8)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
+                    <span style={{fontSize:13,fontWeight:800,color:"#b8956a",letterSpacing:.5}}>스탠딩</span>
+                    <span style={{fontSize:22,fontWeight:900,color:"#8b6914"}}>2</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Clock + Status */}
+        <div style={{width:280,flexShrink:0,background:"rgba(255,255,255,.7)",backdropFilter:"blur(8px)",borderLeft:"1px solid #dde2e8",padding:"20px 18px",display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:40,fontWeight:900,color:"#0f172a",letterSpacing:-2,fontVariantNumeric:"tabular-nums",lineHeight:1}}>{clock(now)}</div>
+            <div style={{fontSize:12,color:"#94a3b8",fontWeight:500,marginTop:4}}>{dateStr(now)}</div>
+          </div>
+          <div style={{width:"100%",background:"#f0f2f5",borderRadius:14,padding:"16px 18px",textAlign:"center"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:6}}>좌석 현황</div>
+            <div style={{display:"flex",gap:3,justifyContent:"center",marginBottom:8}}>
+              {Array.from({length:14}).map((_,i)=>(
+                <div key={i} style={{width:14,height:22,borderRadius:3,background:i<occ?(occ>10?"#ef4444":"#1a73e8"):"#dde2e8",transition:"background .3s"}}/>
+              ))}
+            </div>
+            <div style={{fontSize:28,fontWeight:900,color:occ>10?"#dc2626":"#1a73e8",lineHeight:1}}>
+              {occ}<span style={{fontSize:16,fontWeight:600,color:"#94a3b8"}}> / 14</span>
+            </div>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>잔여 {14-occ}석 · {occ>10?"혼잡":occ>6?"보통":"여유"}</div>
+          </div>
+          <div style={{width:"100%",flex:1,overflowY:"auto"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:6}}>현재 착석 학생</div>
+            {Object.entries(sm).filter(([,v])=>v).length===0?(
+              <div style={{textAlign:"center",padding:20,color:"#b0bec5",fontSize:12}}>착석 학생 없음</div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {Object.entries(sm).filter(([,v])=>v).sort((a,b)=>+a[0]-+b[0]).map(([sid,o])=>(
+                  <div key={sid} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,background:"#f8f9fb",border:"1px solid #eef0f4"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{fontSize:10,fontWeight:800,color:"#1a73e8",minWidth:24}}>{sid}번</span>
+                      <span style={{fontSize:12,fontWeight:700,color:"#1a365d"}}>{o.studentName}</span>
+                    </div>
+                    <span style={{fontSize:10,color:"#7c9ab8",fontWeight:600}}>{fmt(Date.now()-o.checkinTs)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{fontSize:9,color:"#b0bec5",textAlign:"center",lineHeight:1.4}}>빈 좌석을 터치하여 입실<br/>내 좌석을 터치하여 퇴실</div>
+        </div>
+      </div>
+
+      {/* ═══ MODALS ═══ */}
+
+      {/* Student Login */}
+      {modal==="stu"&&(
+        <Modal onClose={close} w={360}>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>{selSeat?.id}번 좌석 입실</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>이름과 PIN을 입력하세요</div>
+          </div>
+          {pinErr&&<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"6px 12px",marginBottom:10,fontSize:12,color:"#dc2626",fontWeight:600,textAlign:"center"}}>{pinErr}</div>}
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:5}}>이름</div>
+            <input value={loginName} onChange={e=>{setLoginName(e.target.value);setPinErr("")}} placeholder="이름을 입력하세요"
+              style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"2px solid #e2e8f0",fontSize:15,fontWeight:600,textAlign:"center",outline:"none"}}
+              onFocus={e=>e.target.style.borderColor="#1a73e8"} onBlur={e=>e.target.style.borderColor="#e2e8f0"}/>
+          </div>
+          <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:5,textAlign:"center"}}>PIN</div>
+          <PinPad value={pin} onChange={v=>{setPin(v);setPinErr("")}}/>
+          <div style={{marginTop:14,display:"flex",justifyContent:"center",gap:8}}>
+            <Btn onClick={close} outline c="#94a3b8">취소</Btn>
+            <Btn onClick={()=>{
+              const name=loginName.trim();
+              if(!name){setPinErr("이름을 입력하세요.");return}
+              if(pin.length<4){setPinErr("PIN 4자리를 입력하세요.");return}
+              const matched=students.find(s=>s.name===name&&String(s.pin)===String(pin));
+              if(!matched){setPinErr("이름 또는 PIN이 일치하지 않습니다.");setPin("");return}
+              const seated=Object.values(sm).some(x=>x?.studentId===matched.id);
+              if(seated){setPinErr(name+"님은 이미 착석 중입니다.");setPin("");return}
+              const ns={...sm};
+              ns[selSeat.id]={studentId:matched.id,studentName:matched.name,checkinTime:clock(new Date()),checkinTs:Date.now()};
+              saveSm(ns);close();
+            }} disabled={!loginName.trim()||pin.length<4}>입실</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Admin Quick Assign */}
+      {modal==="adm-assign"&&(
+        <Modal onClose={close} w={400}>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>{selSeat?.id}번 좌석 배치</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>학생을 선택하면 바로 입실됩니다</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:340,overflowY:"auto"}}>
+            {students.map(st=>{
+              const seated=Object.values(sm).some(v=>v?.studentId===st.id);
+              const seatNum=Object.entries(sm).find(([,v])=>v?.studentId===st.id);
+              return(
+                <button key={st.id} disabled={seated} onClick={()=>{
+                  const ns={...sm};
+                  ns[selSeat.id]={studentId:st.id,studentName:st.name,checkinTime:clock(new Date()),checkinTs:Date.now()};
+                  saveSm(ns);close();
+                }}
+                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:10,border:"1.5px solid #e2e8f0",background:seated?"#f1f5f9":"#fff",cursor:seated?"not-allowed":"pointer",opacity:seated?.45:1,transition:"all .12s"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{width:32,height:32,borderRadius:8,background:seated?"#e2e8f0":"linear-gradient(135deg,#e8f0fe,#d2e3fc)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#1a73e8"}}>{st.name[0]}</div>
+                    <span style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{st.name}</span>
+                  </div>
+                  {seated&&<span style={{fontSize:10,color:"#94a3b8",fontWeight:600}}>{seatNum?.[0]}번 착석 중</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{marginTop:14,textAlign:"center"}}><Btn onClick={close} outline c="#94a3b8">취소</Btn></div>
+        </Modal>
+      )}
+
+      {/* Checkout */}
+      {modal==="co"&&(
+        <Modal onClose={close} w={340}>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:36,marginBottom:4}}>👋</div>
+            <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>퇴실하시겠습니까?</div>
+            <div style={{fontSize:13,color:"#64748b",marginTop:4}}><b>{sm[selSeat?.id]?.studentName}</b> · {selSeat?.id}번</div>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>입실 {sm[selSeat?.id]?.checkinTime} → 현재 {clock(now)}</div>
+            <div style={{fontSize:15,fontWeight:800,color:"#1a73e8",marginTop:6}}>공부시간: {sm[selSeat?.id]?fmt(Date.now()-sm[selSeat?.id]?.checkinTs):""}</div>
+          </div>
+          <div style={{marginTop:16,display:"flex",justifyContent:"center",gap:8}}>
+            <Btn onClick={close} outline c="#94a3b8">취소</Btn>
+            <Btn onClick={()=>checkout(selSeat.id)} c="#dc2626">퇴실</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Admin Login */}
+      {modal==="adm-login"&&(
+        <Modal onClose={close} w={340}>
+          <div style={{textAlign:"center",marginBottom:12}}>
+            <div style={{fontSize:28}}>🔐</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>관리자 로그인</div>
+          </div>
+          {pinErr&&<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"6px 10px",marginBottom:8,fontSize:12,color:"#dc2626",fontWeight:600,textAlign:"center"}}>{pinErr}</div>}
+          <PinPad value={aPin} onChange={v=>{setAPin(v);setPinErr("")}}/>
+          <div style={{marginTop:12,display:"flex",justifyContent:"center",gap:8}}>
+            <Btn onClick={close} outline c="#94a3b8">취소</Btn>
+            <Btn onClick={()=>{
+              if(String(aPin)===String(adminPinStored)){setAdmin(true);close()}
+              else{setPinErr("PIN 불일치");setAPin("")}
+            }} disabled={aPin.length<4}>로그인</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Admin Seat Action */}
+      {modal==="adm-seat"&&(
+        <Modal onClose={close} w={360}>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>{selSeat?.id}번 · {sm[selSeat?.id]?.studentName}</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            <Btn onClick={()=>{setMoveSeat(selSeat);setModal("mv")}} s={{width:"100%",padding:12,fontSize:14}}>🔄 자리 이동</Btn>
+            <Btn onClick={()=>checkout(selSeat.id)} c="#dc2626" s={{width:"100%",padding:12,fontSize:14}}>🚪 강제 퇴실</Btn>
+            <Btn onClick={close} outline c="#94a3b8" s={{width:"100%",padding:12,fontSize:14}}>취소</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Move Seat */}
+      {modal==="mv"&&(
+        <Modal onClose={close} w={460}>
+          <div style={{textAlign:"center",marginBottom:12}}>
+            <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>자리 이동 — {sm[moveSeat?.id]?.studentName}</div>
+            <div style={{fontSize:12,color:"#64748b"}}>이동할 빈 자리 선택</div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+            {SEATS.map(s=>{
+              const o=sm[s.id],cur=s.id===moveSeat?.id,avail=!o&&!cur;
+              return(
+                <button key={s.id} disabled={!avail} onClick={()=>avail&&moveTo(moveSeat.id,s.id)}
+                  style={{padding:"10px 6px",borderRadius:8,border:cur?"2px solid #f59e0b":avail?"2px solid #22c55e":"1.5px solid #e2e8f0",background:cur?"#fef3c7":avail?"#f0fdf4":"#f8fafc",cursor:avail?"pointer":"not-allowed",opacity:o&&!cur?.35:1,fontSize:12,fontWeight:700,color:"#0f172a"}}>
+                  {s.id}번{cur?" ←":o?"":""}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{marginTop:14,textAlign:"center"}}><Btn onClick={close} outline c="#94a3b8">취소</Btn></div>
+        </Modal>
+      )}
+
+      {/* Admin Student Management */}
+      {modal==="admin-stu"&&(
+        <Modal onClose={close} w={520}>
+          <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:12}}>👩‍🎓 학생 관리</div>
+          <div style={{background:"#f8fafc",borderRadius:12,padding:14,marginBottom:12,border:"1.5px solid #e2e8f0"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:8}}>학생 추가 <span style={{fontSize:10,color:"#94a3b8",fontWeight:500}}>(동명이인은 PIN만 다르게 등록)</span></div>
+            {pinErr&&<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"6px 10px",marginBottom:8,fontSize:12,color:"#dc2626",fontWeight:600,textAlign:"center"}}>{pinErr}</div>}
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <input placeholder="이름" value={nName} onChange={e=>setNName(e.target.value)} style={{flex:1,minWidth:80,padding:"7px 10px",borderRadius:7,border:"1.5px solid #e2e8f0",fontSize:13}}/>
+              <input placeholder="PIN 4자리" value={nPin} onChange={e=>setNPin(e.target.value.replace(/\D/g,"").slice(0,4))} style={{width:90,padding:"7px 10px",borderRadius:7,border:"1.5px solid #e2e8f0",fontSize:13}}/>
+              <Btn onClick={addStu} disabled={!nName.trim()||nPin.length<4}>추가</Btn>
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:280,overflowY:"auto"}}>
+            {students.map(st=>(
+              <div key={st.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",borderRadius:8,border:"1.5px solid #e2e8f0",background:"#fff"}}>
+                {editStu?.id===st.id?(
+                  <div style={{display:"flex",gap:5,flex:1,flexWrap:"wrap",alignItems:"center"}}>
+                    <input value={editStu.name} onChange={e=>setEditStu({...editStu,name:e.target.value})} style={{width:80,padding:"5px 7px",borderRadius:6,border:"1.5px solid #e2e8f0",fontSize:12}}/>
+                    <input value={editStu.pin} onChange={e=>setEditStu({...editStu,pin:e.target.value.replace(/\D/g,"").slice(0,4)})} placeholder="PIN" style={{width:60,padding:"5px 7px",borderRadius:6,border:"1.5px solid #e2e8f0",fontSize:12}}/>
+                    <Btn onClick={updateStu} s={{padding:"5px 10px",fontSize:11}}>저장</Btn>
+                    <Btn onClick={()=>setEditStu(null)} outline c="#94a3b8" s={{padding:"5px 10px",fontSize:11}}>취소</Btn>
+                  </div>
+                ):(<>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{st.name}</span>
+                    <span style={{fontSize:10,color:"#cbd5e1"}}>PIN:{st.pin}</span>
+                  </div>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>setEditStu({...st})} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #e2e8f0",background:"#f8fafc",fontSize:11,cursor:"pointer"}}>✏️</button>
+                    {delConfirm===st.id?(
+                      <>
+                        <button onClick={()=>{delStu(st.id);setDelConfirm(null)}} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #dc2626",background:"#dc2626",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer"}}>확인</button>
+                        <button onClick={()=>setDelConfirm(null)} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #e2e8f0",background:"#f8fafc",fontSize:10,fontWeight:700,cursor:"pointer"}}>취소</button>
+                      </>
+                    ):(
+                      <button onClick={()=>setDelConfirm(st.id)} style={{padding:"3px 8px",borderRadius:5,border:"1px solid #fecaca",background:"#fff5f5",fontSize:11,cursor:"pointer"}}>🗑️</button>
+                    )}
+                  </div>
+                </>)}
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:14,textAlign:"center"}}><Btn onClick={close} outline c="#94a3b8">닫기</Btn></div>
+        </Modal>
+      )}
+
+      {/* Change Admin PIN */}
+      {modal==="change-pin"&&(
+        <Modal onClose={close} w={380}>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:28}}>🔑</div>
+            <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>관리자 비밀번호 변경</div>
+          </div>
+          {changePinErr&&<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"6px 10px",marginBottom:10,fontSize:12,color:"#dc2626",fontWeight:600,textAlign:"center"}}>{changePinErr}</div>}
+          {changePinOk&&<div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"6px 10px",marginBottom:10,fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center"}}>{changePinOk}</div>}
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>현재 비밀번호</div>
+              <input type="password" value={changePinOld} onChange={e=>{setChangePinOld(e.target.value.replace(/\D/g,"").slice(0,4));setChangePinErr("");setChangePinOk("")}} placeholder="현재 PIN 4자리" maxLength={4}
+                style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>새 비밀번호</div>
+              <input type="password" value={changePinNew} onChange={e=>{setChangePinNew(e.target.value.replace(/\D/g,"").slice(0,4));setChangePinErr("");setChangePinOk("")}} placeholder="새 PIN 4자리" maxLength={4}
+                style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>새 비밀번호 확인</div>
+              <input type="password" value={changePinConfirm} onChange={e=>{setChangePinConfirm(e.target.value.replace(/\D/g,"").slice(0,4));setChangePinErr("");setChangePinOk("")}} placeholder="새 PIN 다시 입력" maxLength={4}
+                style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
+            </div>
+          </div>
+          <div style={{marginTop:16,display:"flex",justifyContent:"center",gap:8}}>
+            <Btn onClick={close} outline c="#94a3b8">취소</Btn>
+            <Btn onClick={()=>{
+              if(changePinOld!==adminPinStored){setChangePinErr("현재 비밀번호가 일치하지 않습니다.");return}
+              if(changePinNew.length<4){setChangePinErr("새 비밀번호 4자리를 입력하세요.");return}
+              if(changePinNew!==changePinConfirm){setChangePinErr("새 비밀번호가 일치하지 않습니다.");return}
+              if(changePinNew===changePinOld){setChangePinErr("현재와 다른 비밀번호를 입력하세요.");return}
+              setAdminPinStored(changePinNew);
+              LS_set("apin",changePinNew);
+              setChangePinOld("");setChangePinNew("");setChangePinConfirm("");
+              setChangePinOk("비밀번호가 변경되었습니다!");
+            }}>변경</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Ranking */}
+      {modal==="rank"&&(
+        <Modal onClose={close} w={440}>
+          <div style={{textAlign:"center",marginBottom:12}}>
+            <div style={{fontSize:30}}>🏆</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>공부왕 랭킹</div>
+            <div style={{fontSize:11,color:"#64748b",marginTop:2}}>클리닉 + 자습 누적시간 TOP 10 (진도수업 제외)</div>
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:12}}>
+            <button onClick={()=>{const[y,m]=rMonth.split("-").map(Number);setRMonth(mKey(new Date(y,m-2,1)))}} style={{padding:"5px 10px",borderRadius:7,border:"1.5px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14}}>◀</button>
+            <div style={{padding:"5px 14px",borderRadius:7,background:"#f8fafc",border:"1.5px solid #e2e8f0",fontSize:14,fontWeight:700,color:"#0f172a",minWidth:110,textAlign:"center"}}>{mLabel(rMonth)}</div>
+            <button onClick={()=>{const[y,m]=rMonth.split("-").map(Number);const d=new Date(y,m,1);if(d<=new Date())setRMonth(mKey(d))}} style={{padding:"5px 10px",borderRadius:7,border:"1.5px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14}}>▶</button>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>
+            {ranking(rMonth).length===0?(
+              <div style={{textAlign:"center",padding:24,color:"#94a3b8",fontSize:13}}>기록 없음</div>
+            ):ranking(rMonth).slice(0,10).map((r,i)=>(
+              <div key={r.sid} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:i===0?"linear-gradient(135deg,#fffbeb,#fef3c7)":i===1?"#f8fafc":i===2?"#fdf8f0":"#fff",border:i===0?"2px solid #f59e0b":"1.5px solid #e2e8f0"}}>
+                <div style={{width:32,height:32,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:i===0?"#f59e0b":i===1?"#94a3b8":i===2?"#cd7c2f":"#e2e8f0",color:i<3?"#fff":"#64748b",fontWeight:900,fontSize:14}}>
+                  {i<3?["🥇","🥈","🥉"][i]:i+1}
+                </div>
+                <div style={{flex:1}}><span style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{r.name}</span></div>
+                <div style={{fontSize:15,fontWeight:800,color:i===0?"#92400e":"#1a73e8"}}>{fmt(r.ms)}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:14,textAlign:"center"}}><Btn onClick={close} outline c="#94a3b8">닫기</Btn></div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(e=>console.log('SW failed',e));
+}
+</script>
+</body>
+</html>

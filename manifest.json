@@ -1,0 +1,18 @@
+{
+  "name": "프라임K수학 STUDY ROOM",
+  "short_name": "PK스터디",
+  "description": "프라임K수학 스터디룸 좌석 키오스크",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#eef1f5",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a73e8'/><text x='50' y='65' font-size='40' font-weight='900' fill='white' text-anchor='middle' font-family='sans-serif'>PK</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
