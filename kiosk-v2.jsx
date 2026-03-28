@@ -21,6 +21,9 @@ const SEATS = [
   { id: 11, row: 0, col: 0, zone: "C" },
   { id: 14, row: 1, col: 0, zone: "C" },
 ];
+const CLASS_SEATS = [
+  { id: "L1" }, { id: "L2" }, { id: "L3" }, { id: "L4" }, { id: "L5" },
+];
 
 const DEFAULT_ADMIN_PIN = "0000";
 const DEFAULT_STUDENTS = [
@@ -203,7 +206,9 @@ export default function App() {
     return Object.entries(tot).map(([sid, ms]) => { const s = students.find(x => x.id === +sid); return { sid: +sid, name: s?.name || "?", ms }; }).sort((a, b) => b.ms - a.ms);
   };
 
-  const occ = Object.keys(sm).filter(k => sm[k]).length;
+  const studyOcc = SEATS.map(s => s.id).filter(id => sm[id]).length;
+  const classOcc = CLASS_SEATS.map(s => s.id).filter(id => sm[id]).length;
+  const occ = studyOcc;
 
   if (!ready) return <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", background: "#f0f2f5", fontFamily: "sans-serif" }}><span style={{ color: "#64748b" }}>로딩 중...</span></div>;
 
@@ -344,18 +349,25 @@ export default function App() {
               <div style={{ textAlign: "center", padding: 20, color: "#b0bec5", fontSize: 12 }}>착석 학생 없음</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                {Object.entries(sm).filter(([, v]) => v).sort((a, b) => +a[0] - +b[0]).map(([sid, o]) => (
+                {Object.entries(sm).filter(([, v]) => v).sort((a, b) => {
+                  const aNum = isNaN(+a[0]) ? 100 + a[0].charCodeAt(1) : +a[0];
+                  const bNum = isNaN(+b[0]) ? 100 + b[0].charCodeAt(1) : +b[0];
+                  return aNum - bNum;
+                }).map(([sid, o]) => {
+                  const isClass = String(sid).startsWith("L");
+                  return (
                   <div key={sid} style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "6px 10px", borderRadius: 8, background: "#f8f9fb", border: "1px solid #eef0f4",
+                    padding: "6px 10px", borderRadius: 8, background: isClass ? "#f0f4ff" : "#f8f9fb", border: isClass ? "1px solid #dde5f5" : "1px solid #eef0f4",
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: "#1a73e8", minWidth: 24 }}>{sid}번</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: isClass ? "#6366f1" : "#1a73e8", minWidth: 24 }}>{sid}{isClass ? "" : "번"}</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: "#1a365d" }}>{o.studentName}</span>
                     </div>
                     <span style={{ fontSize: 10, color: "#7c9ab8", fontWeight: 600 }}>{fmt(Date.now() - o.checkinTs)}</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -364,6 +376,33 @@ export default function App() {
           <div style={{ fontSize: 9, color: "#b0bec5", textAlign: "center", lineHeight: 1.4 }}>
             빈 좌석을 터치하여 입실<br />
             내 좌석을 터치하여 퇴실
+          </div>
+
+          {/* Classroom seats */}
+          <div style={{ width: "100%", flexShrink: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 6 }}>강의실 좌석</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 5 }}>
+              {CLASS_SEATS.map(cs => {
+                const o = sm[cs.id];
+                const filled = !!o;
+                return (
+                  <button key={cs.id} onClick={() => seatPress(cs)} style={{
+                    padding: "8px 4px", borderRadius: 8, cursor: "pointer",
+                    border: filled ? "2px solid #1a73e8" : "1.5px dashed #c5cdd8",
+                    background: filled ? "linear-gradient(145deg,#e3edfc,#cddcf8)" : "#f8f9fb",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                    boxShadow: filled ? "0 1px 4px rgba(26,115,232,.15)" : "none",
+                  }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: filled ? "#1a73e8" : "#a0aec0" }}>{cs.id}</span>
+                    {filled ? (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#1a365d", lineHeight: 1.1 }}>{o.studentName}</span>
+                    ) : (
+                      <span style={{ fontSize: 9, color: "#cbd5e1" }}>빈석</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
