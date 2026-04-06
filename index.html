@@ -148,6 +148,10 @@ function App(){
   const[stuPinConfirm,setStuPinConfirm]=useState("");
   const[stuPinErr,setStuPinErr]=useState("");
   const[stuPinOk,setStuPinOk]=useState("");
+  const[adjStu,setAdjStu]=useState(null);
+  const[adjMin,setAdjMin]=useState("");
+  const[adjErr,setAdjErr]=useState("");
+  const[adjOk,setAdjOk]=useState("");
 
   useEffect(()=>{const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t)},[]);
 
@@ -155,7 +159,7 @@ function App(){
   const saveSm=(m)=>{setSm(m);LS_set("sm",m)};
   const saveLog=(l)=>{setLog(l);LS_set("log",l)};
 
-  const close=()=>{setModal(null);setSelSeat(null);setSelStu(null);setPin("");setPinErr("");setAPin("");setMoveSeat(null);setNName("");setNPin("");setEditStu(null);setDelConfirm(null);setBulkConfirm(false);setLoginName("");setChangePinOld("");setChangePinNew("");setChangePinConfirm("");setChangePinErr("");setChangePinOk("");setStuPinOld("");setStuPinNew("");setStuPinConfirm("");setStuPinErr("");setStuPinOk("")};
+  const close=()=>{setModal(null);setSelSeat(null);setSelStu(null);setPin("");setPinErr("");setAPin("");setMoveSeat(null);setNName("");setNPin("");setEditStu(null);setDelConfirm(null);setBulkConfirm(false);setLoginName("");setChangePinOld("");setChangePinNew("");setChangePinConfirm("");setChangePinErr("");setChangePinOk("");setStuPinOld("");setStuPinNew("");setStuPinConfirm("");setStuPinErr("");setStuPinOk("");setAdjStu(null);setAdjMin("");setAdjErr("");setAdjOk("")};
 
   const checkout=(sid)=>{
     const o=sm[sid];if(!o)return;
@@ -222,6 +226,7 @@ function App(){
             <div style={{display:"flex",gap:0,background:"#fef2f2",borderRadius:8,overflow:"hidden",border:"1.5px solid #fecaca"}}>
               <button onClick={()=>setModal("admin-stu")} style={{padding:"7px 14px",border:"none",background:"transparent",fontSize:12,fontWeight:700,color:"#991b1b",cursor:"pointer"}}>👩‍🎓 학생관리</button>
               <button onClick={()=>setModal("change-pin")} style={{padding:"7px 14px",border:"none",background:"transparent",fontSize:12,fontWeight:700,color:"#991b1b",cursor:"pointer",borderLeft:"1px solid #fecaca"}}>🔑 비밀번호</button>
+              <button onClick={()=>setModal("adj-time")} style={{padding:"7px 14px",border:"none",background:"transparent",fontSize:12,fontWeight:700,color:"#991b1b",cursor:"pointer",borderLeft:"1px solid #fecaca"}}>⏱ 시간조정</button>
               {bulkConfirm?(
                 <>
                   <button onClick={()=>{Object.keys(sm).forEach(k=>{const o=sm[k];if(o){const dur=Date.now()-o.checkinTs;const mk2=mKey(new Date());const nl={...log};if(!nl[mk2])nl[mk2]={};nl[mk2][o.studentId]=(nl[mk2][o.studentId]||0)+dur;saveLog(nl)}});saveSm({});setBulkConfirm(false)}} style={{padding:"7px 14px",border:"none",background:"#dc2626",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",borderLeft:"1px solid #fecaca",borderRadius:4}}>✅ 확인</button>
@@ -447,17 +452,17 @@ function App(){
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <div>
               <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>현재 비밀번호</div>
-              <input type="password" value={stuPinOld} onChange={e=>{setStuPinOld(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("")}} placeholder="현재 PIN 4자리" maxLength={4}
+              <input type="password" value={stuPinOld} onChange={e=>{setStuPinOld(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("");setAdjStu(null);setAdjMin("");setAdjErr("");setAdjOk("")}} placeholder="현재 PIN 4자리" maxLength={4}
                 style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
             </div>
             <div>
               <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>새 비밀번호</div>
-              <input type="password" value={stuPinNew} onChange={e=>{setStuPinNew(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("")}} placeholder="새 PIN 4자리" maxLength={4}
+              <input type="password" value={stuPinNew} onChange={e=>{setStuPinNew(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("");setAdjStu(null);setAdjMin("");setAdjErr("");setAdjOk("")}} placeholder="새 PIN 4자리" maxLength={4}
                 style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
             </div>
             <div>
               <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:4}}>새 비밀번호 확인</div>
-              <input type="password" value={stuPinConfirm} onChange={e=>{setStuPinConfirm(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("")}} placeholder="새 PIN 다시 입력" maxLength={4}
+              <input type="password" value={stuPinConfirm} onChange={e=>{setStuPinConfirm(e.target.value.replace(/\D/g,"").slice(0,4));setStuPinErr("");setStuPinOk("");setAdjStu(null);setAdjMin("");setAdjErr("");setAdjOk("")}} placeholder="새 PIN 다시 입력" maxLength={4}
                 style={{width:"100%",padding:"10px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:18,fontWeight:700,textAlign:"center",letterSpacing:8}}/>
             </div>
           </div>
@@ -651,16 +656,81 @@ function App(){
           <div style={{marginTop:14,textAlign:"center"}}><Btn onClick={close} outline c="#94a3b8">닫기</Btn></div>
         </Modal>
       )}
+      {/* Time Adjustment - Student List */}
+      {modal==="adj-time"&&!adjStu&&(
+        <Modal onClose={close} w={480}>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:28}}>⏱</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>시간 조정</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>학생을 선택하세요 · {mLabel(rMonth)} 기준</div>
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:12}}>
+            <button onClick={()=>{const[y,m]=rMonth.split("-").map(Number);setRMonth(mKey(new Date(y,m-2,1)))}} style={{padding:"5px 10px",borderRadius:7,border:"1.5px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14}}>◀</button>
+            <div style={{padding:"5px 14px",borderRadius:7,background:"#f8fafc",border:"1.5px solid #e2e8f0",fontSize:14,fontWeight:700,color:"#0f172a",minWidth:110,textAlign:"center"}}>{mLabel(rMonth)}</div>
+            <button onClick={()=>{const[y,m]=rMonth.split("-").map(Number);const d=new Date(y,m,1);if(d<=new Date())setRMonth(mKey(d))}} style={{padding:"5px 10px",borderRadius:7,border:"1.5px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14}}>▶</button>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:380,overflowY:"auto"}}>
+            {ranking(rMonth).length===0?(
+              <div style={{textAlign:"center",padding:24,color:"#94a3b8",fontSize:13}}>기록 없음</div>
+            ):ranking(rMonth).map((r)=>(
+              <button key={r.sid} onClick={()=>{setAdjStu(r);setAdjMin("");setAdjErr("");setAdjOk("")}}
+                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:10,border:"1.5px solid #e2e8f0",background:"#fff",cursor:"pointer",transition:"all .12s"}}>
+                <span style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{r.name}</span>
+                <span style={{fontSize:15,fontWeight:800,color:"#1a73e8"}}>{fmt(r.ms)}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{marginTop:14,textAlign:"center"}}><Btn onClick={close} outline c="#94a3b8">닫기</Btn></div>
+        </Modal>
+      )}
+
+      {/* Time Adjustment - Input */}
+      {modal==="adj-time"&&adjStu&&(
+        <Modal onClose={close} w={400}>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:28}}>⏱</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>{adjStu.name} 시간 차감</div>
+            <div style={{fontSize:13,color:"#64748b",marginTop:4}}>현재 기록: <b style={{color:"#1a73e8",fontSize:16}}>{fmt(adjStu.ms)}</b></div>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{mLabel(rMonth)} 기준</div>
+          </div>
+          {adjErr&&<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"6px 10px",marginBottom:10,fontSize:12,color:"#dc2626",fontWeight:600,textAlign:"center"}}>{adjErr}</div>}
+          {adjOk&&<div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"6px 10px",marginBottom:10,fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center"}}>{adjOk}</div>}
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:6,textAlign:"center"}}>차감할 시간 (분)</div>
+            <input value={adjMin} onChange={e=>{setAdjMin(e.target.value.replace(/\D/g,""));setAdjErr("");setAdjOk("")}}
+              placeholder="예: 30" maxLength={4}
+              style={{width:"100%",padding:"12px 14px",borderRadius:10,border:"2px solid #e2e8f0",fontSize:22,fontWeight:700,textAlign:"center"}}/>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:12}}>
+            {[10,30,60,120].map(m=>(
+              <button key={m} onClick={()=>{setAdjMin(String(m));setAdjErr("");setAdjOk("")}} style={{
+                padding:"8px 14px",borderRadius:8,border:"1.5px solid #e2e8f0",
+                background:adjMin===String(m)?"#fee2e2":"#f8fafc",
+                fontSize:13,fontWeight:700,color:"#dc2626",cursor:"pointer",
+              }}>{m}분</button>
+            ))}
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:8}}>
+            <Btn onClick={()=>{setAdjStu(null);setAdjMin("");setAdjErr("");setAdjOk("")}} outline c="#94a3b8">← 학생 목록</Btn>
+            <Btn onClick={()=>{
+              const min=parseInt(adjMin);
+              if(!min||min<=0){setAdjErr("차감할 시간을 입력하세요.");return}
+              const deductMs=min*60000;
+              const curMs=adjStu.ms;
+              if(deductMs>curMs){setAdjErr("최대 "+Math.floor(curMs/60000)+"분까지 차감 가능합니다.");return}
+              const nl={...log};
+              if(!nl[rMonth])nl[rMonth]={};
+              nl[rMonth][adjStu.sid]=Math.max(0,(nl[rMonth][adjStu.sid]||0)-deductMs);
+              if(nl[rMonth][adjStu.sid]<=0)delete nl[rMonth][adjStu.sid];
+              saveLog(nl);
+              const newMs=curMs-deductMs;
+              setAdjStu({...adjStu,ms:newMs});
+              setAdjMin("");
+              setAdjOk(min+"분 차감 완료! → "+fmt(newMs));
+            }} c="#dc2626">차감</Btn>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-</script>
-<script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(e=>console.log('SW failed',e));
-}
-</script>
-</body>
-</html>
